@@ -1,105 +1,85 @@
-
-# for each point
-# find the k nearest neighbors
-# assign the point to the largest category of neighbors
-
-import numpy as np
-import csv
-from matplotlib import pyplot as plt
-
-data=None
-header=None
-point=None # which point needs prediction
-
-def euclidean(a, b):
-    A=np.asarray(a)
-    B=np.asarray(b)
-    A=np.delete(A, 0) # removing price
-    B=np.delete(B, 0) # removing price
-    return np.sqrt(np.sum(np.square(A-B)))
-
-def manhattan(a, b):
-    A=np.asarray(a)
-    B=np.asarray(b)
-
-    A=np.delete(A, 0) # removing price
-    B=np.delete(B, 0) # removing price
-    return np.sum(np.abs(A-B))
-
-def compare(i):
-    global point
-    #print(point)
-    return euclidean(i, point)
-
-price_prediction=[]
-def knn(k):
-    global data
-    data=data.tolist() # temporarily converting to list for custom comparator
-    data.sort(key=compare)
-    data=np.asarray(data)
-    s=0
-    for i in range(k):
-        s += data[i][0]
-    s/=k
-    price_prediction.append(s)
-   # print("price = ", s)
-    
-def normalize():
-    for i in range(1, len(data[0])):
-        mn=1000000000000
-        mx=0
-        for j in range(len(data)):
-            mn=min(mn, data[j][i])
-            mx=max(mx, data[j][i])
-        for j in range(len(data)):
-            data[j][i]=(data[j][i]-mn)/(mx-mn)
-
-def setup():
-    global data, header
-    with open("data/new.csv") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            line_data=[i for line, i in enumerate(row)]
-            data=(line_data if data is None else np.vstack([data, line_data]))
-           # print(data)
-    
-    # delete the names
-    data=data[:,1:]
-    # delete header
-    header=data[0]
-    data=np.delete(data, (0), axis=0)
-    # convert strings to floats
-    data=data.astype(np.float)
-    print(data)
-
-setup()
-point=np.array([0, 3145,236,528,0.17,9,7,6])
-
-#normalize()
-
-for k in range(1, len(data)-1):
-    knn(k)
-
-plt.plot(price_prediction)
-plt.show()
-
-#knn(1, )
-
-#print(header)
-#print(data)
-
-"""
-
 import pandas as pd
 import numpy as np
+import csv
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_validate
 from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sb
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
 
-print("hello1")
+
+def normalize(df):
+	result = df.copy()
+	for feature_name in df.columns:
+		max_value=df[feature_name].max()
+		min_value=df[feature_name].min()
+		result[feature_name]=(df[feature_name]-min_value)/(max_value-min_value)
+	return result
+
+
+data = pd.read_csv('new_cut.csv')
+#data=data.iloc[:-103900]
+data=data.iloc[:-60000]
+
+data = data[['danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms', 'explicit', 'year']]
+
+X = data[['danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms']]
+# y = data[['explicit', 'year']]
+y=data['explicit']
+
+print(X.head(5))
+
+#print(data['year'].min())
+#print(data['year'].max())
+
+X=normalize(X)
+
+print(X.head(5))
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+knn=KNeighborsRegressor(n_neighbors=200)
+knn.fit(X_train, y_train)
+#knn.fit(X_train, np.ravel(y_train, order='C'))
+y_pred = knn.predict(X_test)
+# print(accuracy_score(y_test, y_pred) * 100)
+
+y_test=y_test.values.tolist()
+y_test=list(y_test)
+y_pred=list(y_pred)
+
+y_test = [float(item) for item in y_test]
+
+print(" test")
+print(y_test)
+print("pred")
+print(y_pred)
+
+xs=[i for i in range(len(y_test))]
+assert(len(y_test)==len(y_pred))
 
 """
+difference = np.subtract(y_test, y_pred)
+squared = np.square(difference)
+mse = squared.mean()
+print(mse)
+print("accuracy: ", sum(1 for x,y in zip(y_test,y_pred) if x == y) / len(y_pred))
+"""
+
+def percentage_error(actual, predicted):
+	res = np.empty(actual.shape)
+	for j in range(actual.shape[0]):
+		if actual[j] != 0:
+			res[j] = (actual[j] - predicted[j]) / actual[j]
+	else:
+		res[j] = predicted[j] / np.mean(actual)
+	return res
+
+def mean_absolute_percentage_error(y_true, y_pred): 
+	return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
+
+print(mean_absolute_percentage_error(y_test, y_pred))
+
