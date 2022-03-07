@@ -28,38 +28,44 @@ data = data[['danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
 
 X = data[['danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo', 'duration_ms']]
 # y = data[['explicit', 'year']]
-y=data['explicit']
+y=data['year']
 
 print(X.head(5))
 
-#print(data['year'].min())
-#print(data['year'].max())
+# print("min year: ", data['year'].min())
+print(data['year'].max())
 
-X=normalize(X)
+# X=normalize(X)
 
 print(X.head(5))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-knn=KNeighborsRegressor(n_neighbors=200)
+knn=KNeighborsClassifier(n_neighbors=200)
 knn.fit(X_train, y_train)
 #knn.fit(X_train, np.ravel(y_train, order='C'))
 y_pred = knn.predict(X_test)
-# print(accuracy_score(y_test, y_pred) * 100)
-
 y_test=y_test.values.tolist()
 y_test=list(y_test)
+y_test = [float(item) for item in y_test]
 y_pred=list(y_pred)
 
-y_test = [float(item) for item in y_test]
+print(accuracy_score(y_test, y_pred))
 
+
+
+
+"""
 print(" test")
 print(y_test)
 print("pred")
 print(y_pred)
+"""
+
 
 xs=[i for i in range(len(y_test))]
 assert(len(y_test)==len(y_pred))
+
 
 """
 difference = np.subtract(y_test, y_pred)
@@ -69,17 +75,13 @@ print(mse)
 print("accuracy: ", sum(1 for x,y in zip(y_test,y_pred) if x == y) / len(y_pred))
 """
 
-def percentage_error(actual, predicted):
-	res = np.empty(actual.shape)
-	for j in range(actual.shape[0]):
-		if actual[j] != 0:
-			res[j] = (actual[j] - predicted[j]) / actual[j]
-	else:
-		res[j] = predicted[j] / np.mean(actual)
-	return res
-
-def mean_absolute_percentage_error(y_true, y_pred): 
-	return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
-
+from sklearn.metrics import mean_absolute_percentage_error
 print(mean_absolute_percentage_error(y_test, y_pred))
+
+print(accuracy_score(y_test, y_pred))
+
+import matplotlib.pyplot as plt
+plt.scatter(data['year'], data['duration_ms'])
+plt.show()
+# data.plot(x='year', y='duration_ms', style='o')
 
